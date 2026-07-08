@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create GitHub Issue"
+  short_description: "Create structured GitHub issues for Nuri"
+  default_prompt: "Use $create-github-issue to draft and create a GitHub issue for this repository."
