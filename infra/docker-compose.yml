@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports: ["5432:5432"]
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"], interval: 5s, timeout: 5s, retries: 10 }
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: [redis-data:/data]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 3s, retries: 10 }
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [minio-data:/data]
+    healthcheck: { test: ["CMD", "mc", "ready", "local"], interval: 5s, timeout: 5s, retries: 10 }
+  ai-worker:
+    build: { context: .., dockerfile: apps/ai-worker/Dockerfile }
+    environment:
+      AI_WORKER_PORT: 8000
+      REDIS_URL: redis://redis:6379
+    ports: ["${AI_WORKER_PORT:-8000}:8000"]
+    depends_on: { redis: { condition: service_healthy } }
+  api:
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    environment:
+      API_PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+      AI_WORKER_URL: http://ai-worker:8000
+      WEB_ORIGIN: http://localhost:${WEB_PORT:-3000}
+    ports: ["${API_PORT:-3001}:3001"]
+    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy }, ai-worker: { condition: service_started } }
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args: { NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:3001}" }
+    environment: { WEB_PORT: 3000, NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:3001}" }
+    ports: ["${WEB_PORT:-3000}:3000"]
+    depends_on: { api: { condition: service_started } }
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

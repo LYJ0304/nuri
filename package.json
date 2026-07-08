@@ -1,0 +1,19 @@
+{
+  "name": "nuri",
+  "private": true,
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:migrate": "pnpm --filter @nuri/api db:migrate",
+    "docker:up": "docker compose --env-file .env -f infra/docker-compose.yml up --build",
+    "docker:down": "docker compose --env-file .env -f infra/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  }
+}

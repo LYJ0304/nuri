@@ -1,0 +1,12 @@
+node_modules
+.turbo
+.next
+dist
+.env
+*.log
+.venv
+__pycache__
+.pytest_cache
+apps/api/prisma/migrations
+minio-data
+postgres-data

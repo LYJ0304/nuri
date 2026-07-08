@@ -1,0 +1,5 @@
+{
+  "extends": "@nuri/config/typescript/base.json",
+  "compilerOptions": { "module": "commonjs", "target": "ES2022", "moduleResolution": "node", "experimentalDecorators": true, "emitDecoratorMetadata": true, "outDir": "dist", "sourceMap": true, "incremental": true, "strictPropertyInitialization": false },
+  "include": ["src/**/*.ts"]
+}
