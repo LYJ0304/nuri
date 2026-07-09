@@ -38,7 +38,7 @@ export class AuthService {
         }
 
         const passwordMatches = await argon2.verify(
-            user.
+            user.passwordHash,
             dto.password,
         );
 
