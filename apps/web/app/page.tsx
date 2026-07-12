@@ -24,10 +24,10 @@ export default function Home() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <Link className="brand" href="/" aria-label="Nuri 홈">
+        <a className="brand" href="#" aria-label="Nuri 홈">
           <span className="brand-mark">N</span>
           <span>Nuri</span>
-        </Link>
+        </a>
 
         <nav className="nav" aria-label="주 메뉴">
           <a className="nav-item active" href="#"><Icon name="folder" />홈</a>
@@ -48,7 +48,7 @@ export default function Home() {
       <main className="main-content">
         <header className="topbar">
           <div><span className="eyebrow">WORKSPACE</span><h1>좋은 아침이에요, 이상담님</h1></div>
-          <Link className="primary-button" href="/records/new"><Icon name="plus" />새 상담 기록</Link>
+          <button className="primary-button"><Icon name="plus" />새 상담 기록</button>
         </header>
 
         <section className="hero-card">
