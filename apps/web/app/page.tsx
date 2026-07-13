@@ -49,7 +49,7 @@ export default function Home() {
       <main className="main-content">
         <header className="topbar">
           <div><span className="eyebrow">WORKSPACE</span><h1>좋은 아침이에요, 이상담님</h1></div>
-          <button className="primary-button"><Icon name="plus" />새 상담 기록</button>
+          <Link className="primary-button" href="/records/new"><Icon name="plus" />새 상담 기록</Link>
         </header>
 
         <section className="hero-card">
