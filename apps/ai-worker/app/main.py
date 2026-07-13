@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from app.config import settings
 from app.summarization.schemas import CounselingSummaryResponse, InternalSummarizeRequest
 from app.summarization.service import CounselingSummaryService, SummaryProviderError
+from app.supervision.schemas import InternalSupervisionRequest, SupervisionResponse
+from app.supervision.service import CounselingSupervisionService, SupervisionProviderError
 
 app = FastAPI(
     title="Nuri AI Worker",
@@ -14,6 +16,7 @@ app = FastAPI(
 )
 
 summary_service = CounselingSummaryService(settings)
+supervision_service = CounselingSupervisionService(settings)
 
 
 class TaskRequest(BaseModel):
@@ -70,6 +73,36 @@ async def execute_summary(
             detail=str(exc),
         ) from exc
     except SummaryProviderError as exc:
+        http_status = (
+            status.HTTP_503_SERVICE_UNAVAILABLE
+            if exc.retryable
+            else status.HTTP_502_BAD_GATEWAY
+        )
+        raise HTTPException(
+            status_code=http_status,
+            detail={
+                "code": exc.code,
+                "message": str(exc),
+                "retryable": exc.retryable,
+            },
+        ) from exc
+
+
+@app.post(
+    "/internal/supervision/execute",
+    response_model=SupervisionResponse,
+)
+async def execute_supervision(
+    request: InternalSupervisionRequest,
+) -> SupervisionResponse:
+    try:
+        return await supervision_service.supervise(request)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except SupervisionProviderError as exc:
         http_status = (
             status.HTTP_503_SERVICE_UNAVAILABLE
             if exc.retryable
