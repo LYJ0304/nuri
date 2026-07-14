@@ -24,6 +24,7 @@ Prefer explicit module boundaries and simple infrastructure over additional serv
 - `packages/ui`: shared UI primitives.
 - `packages/config`: shared TypeScript and formatting configuration.
 - `infra/docker-compose.yml`: local PostgreSQL, Redis, MinIO, API, worker, and web stack.
+- `docs`: current implementation and development notes for web, API, and AI worker.
 
 ## Architectural boundaries
 
@@ -70,6 +71,7 @@ Prefer explicit module boundaries and simple infrastructure over additional serv
 - Do not implement speculative abstractions, generic repositories, or broad base classes.
 - Preserve unrelated user changes. Do not rewrite or reformat files outside the task scope.
 - Do not implement real authentication, OCR, or LLM behavior unless explicitly requested.
+- Keep the relevant file under `docs` aligned when behavior, public routes, contracts, environment variables, or service boundaries change.
 
 ## Common commands
 
