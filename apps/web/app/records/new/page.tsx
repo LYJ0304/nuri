@@ -42,15 +42,26 @@ export default function NewRecordPage() {
           </section>
 
           <section className="form-card">
-            <div className="form-card-heading"><span>2</span><div><h2>상담 기록</h2><p>상담 내용을 직접 입력하거나 텍스트 파일을 첨부해 주세요.</p></div></div>
-            <label className="field"><span>상담 원문</span><textarea name="transcript" rows={12} placeholder={'상담자: 오늘은 어떤 이야기를 나누고 싶으신가요?\n내담자: 최근 수면 문제로 어려움을 겪고 있어요.'} required /><small>화자를 구분해 입력하면 더 정확하게 요약할 수 있어요.</small></label>
-            <div className="form-divider"><span>또는</span></div>
-            <label className="upload-box">
-              <input type="file" name="recordFile" accept=".txt,.md,.doc,.docx" />
-              <span className="upload-icon"><Icon name="upload" /></span>
-              <strong>파일을 선택하거나 여기로 끌어오세요</strong>
-              <small>TXT, MD, DOC, DOCX · 최대 10MB</small>
-            </label>
+            <div className="form-card-heading"><span>2</span><div><h2>클라이언트 정보</h2><p>상담을 진행하고 있는 클라이언트의 정보를 입력해 주세요.</p></div></div>
+            <div className="form-grid">
+              <label className="field"><span>생년월일</span><input name="birthDate" type="date" /></label>
+              <label className="field"><span>성별</span><select name="gender" defaultValue=""><option value="" disabled>성별 선택</option><option value="male">남성</option><option value="female">여성</option><option value="other">기타</option><option value="not-disclosed">응답하지 않음</option></select></label>
+              <label className="field"><span>직업</span><input name="occupation" placeholder="직업 입력" /></label>
+              <label className="field"><span>전화번호</span><input name="phoneNumber" type="tel" placeholder="010-0000-0000" /></label>
+              <label className="field full"><span>주소</span><input name="address" autoComplete="street-address" placeholder="주소 입력" /></label>
+              <label className="field"><span>보호구분</span><select name="protectionCategory" defaultValue=""><option value="" disabled>보호구분 선택</option><option value="customized-benefit">맞춤형 급여</option><option value="conditional-recipient">조건부 수급</option><option value="near-poverty">차상위</option><option value="low-income">저소득</option><option value="general">일반</option></select></label>
+              <label className="field"><span>가구유형</span><select name="householdType" defaultValue=""><option value="" disabled>가구유형 선택</option><option value="single">1인 가구</option><option value="couple">부부 가구</option><option value="single-parent">한부모 가구</option><option value="grandparent-grandchild">조손 가구</option><option value="multicultural">다문화 가구</option><option value="other">기타</option></select></label>
+              <label className="field"><span>장애 유무</span><select name="hasDisability" defaultValue=""><option value="" disabled>장애 유무 선택</option><option value="no">없음</option><option value="yes">있음</option></select></label>
+              <label className="field"><span>장기요양</span><select name="longTermCare" defaultValue=""><option value="" disabled>장기요양 상태 선택</option><option value="none">해당 없음</option><option value="applied">신청 중</option><option value="eligible">등급 있음</option></select></label>
+              <label className="field full"><span>긴급 연락처</span><input name="emergencyContact" type="tel" placeholder="010-0000-0000" /></label>
+              <fieldset className="field-group full">
+                <legend>주거 현황</legend>
+                <div className="housing-grid">
+                  <label className="field"><span>형태</span><select name="housingType" defaultValue=""><option value="" disabled>주거 형태 선택</option><option value="apartment">아파트</option><option value="detached-house">단독주택</option><option value="multi-family-house">다세대·연립주택</option><option value="officetel">오피스텔</option><option value="goshiwon">고시원</option><option value="temporary">임시 거처</option><option value="other">기타</option></select></label>
+                  <label className="field"><span>소유</span><select name="housingOwnership" defaultValue=""><option value="" disabled>소유 형태 선택</option><option value="owned">자가</option><option value="jeonse">전세</option><option value="monthly-rent">월세</option><option value="free">무상 거주</option><option value="facility">시설 거주</option><option value="other">기타</option></select></label>
+                </div>
+              </fieldset>
+            </div>
           </section>
 
           <section className="summary-option">
