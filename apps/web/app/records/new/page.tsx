@@ -1,10 +1,13 @@
-import Link from 'next/link';
+'use client';
 
-function Icon({ name }: { name: 'back' | 'upload' | 'sparkle' | 'lock' }) {
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { useCounselingStore } from '../../../stores/counseling-store';
+
+function Icon({ name }: { name: 'back' | 'lock' }) {
   const paths = {
     back: <><path d="M19 12H5M10 7l-5 5 5 5" /></>,
-    upload: <><path d="M12 16V4M7 9l5-5 5 5" /><path d="M5 15v5h14v-5" /></>,
-    sparkle: <><path d="m12 3 1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3z" /><path d="m18.5 14 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></>,
     lock: <><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
   };
 
@@ -12,6 +15,25 @@ function Icon({ name }: { name: 'back' | 'upload' | 'sparkle' | 'lock' }) {
 }
 
 export default function NewRecordPage() {
+  const router = useRouter();
+  const addClient = useCounselingStore((state) => state.addClient);
+  const setSessionDraft = useCounselingStore((state) => state.setSessionDraft);
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const value = (name: string) => String(form.get(name) ?? '');
+    const client = addClient({
+      name: value('clientName'), birthDate: value('birthDate'), gender: value('gender'), occupation: value('occupation'), phoneNumber: value('phoneNumber'), address: value('address'),
+      protectionCategory: value('protectionCategory'), householdType: value('householdType'), hasDisability: value('hasDisability'), longTermCare: value('longTermCare'), emergencyContact: value('emergencyContact'),
+      housingType: value('housingType'), housingOwnership: value('housingOwnership'), familyRelationship: value('familyRelationship'), familyName: value('familyName'), familyGender: value('familyGender'),
+      familyBirthDate: value('familyBirthDate'), familyOccupation: value('familyOccupation'), familyCohabitation: value('familyCohabitation'), familyNotes: value('familyNotes'),
+    });
+    const sessionNumber = Number(value('sessionNumber'));
+    setSessionDraft({ clientId: client.id, title: value('title'), sessionDate: value('sessionDate'), sessionType: value('sessionType'), sessionNumber: Number.isFinite(sessionNumber) && sessionNumber > 0 ? sessionNumber : undefined });
+    router.push(`/records/write?clientId=${client.id}`);
+  }
+
   return (
     <main className="record-page">
       <header className="record-header">
@@ -25,11 +47,11 @@ export default function NewRecordPage() {
         <Link className="back-link" href="/"><Icon name="back" />홈으로 돌아가기</Link>
         <div className="record-title">
           <span className="eyebrow">NEW RECORD</span>
-          <h1>새 상담 기록</h1>
-          <p>상담 정보를 입력하고 기록을 추가해 주세요. 저장 후 AI 요약을 생성할 수 있어요.</p>
+          <h1>새 상담 등록</h1>
+          <p>상담과 내담자 정보를 먼저 등록해 주세요. 등록 후 상담 내용을 작성할 수 있어요.</p>
         </div>
 
-        <form className="record-form">
+        <form className="record-form" onSubmit={handleSubmit}>
           <section className="form-card">
             <div className="form-card-heading"><span>1</span><div><h2>기본 정보</h2><p>상담을 구분하기 위한 정보를 입력해 주세요.</p></div></div>
             <div className="form-grid">
@@ -77,15 +99,9 @@ export default function NewRecordPage() {
             </div>
           </section>
 
-          <section className="summary-option">
-            <span className="option-icon"><Icon name="sparkle" /></span>
-            <div><strong>저장 후 AI 요약 생성</strong><p>핵심 상담 내용, 개입 사항과 다음 상담 확인 사항을 자동으로 정리해요.</p></div>
-            <label className="switch"><input type="checkbox" name="generateSummary" defaultChecked /><span /></label>
-          </section>
-
           <div className="form-actions">
             <Link className="secondary-button" href="/">취소</Link>
-            <button className="primary-button" type="submit">상담 기록 저장</button>
+            <button className="primary-button" type="submit">상담 정보 등록</button>
           </div>
         </form>
       </div>

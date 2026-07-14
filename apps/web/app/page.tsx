@@ -1,12 +1,9 @@
+'use client';
+
 import Link from 'next/link';
 
 import { HealthCheck } from './health-check';
-
-const recentRecords = [
-  { name: '초기 상담 기록', client: '김민서', date: '오늘, 10:24', status: '요약 완료' },
-  { name: '2차 상담 기록', client: '박준호', date: '어제, 16:40', status: '처리 중' },
-  { name: '경과 관찰 기록', client: '이서윤', date: '7월 10일', status: '요약 완료' },
-];
+import { useCounselingStore } from '../stores/counseling-store';
 
 function Icon({ name }: { name: 'document' | 'sparkle' | 'folder' | 'arrow' | 'plus' }) {
   const paths = {
@@ -21,6 +18,13 @@ function Icon({ name }: { name: 'document' | 'sparkle' | 'folder' | 'arrow' | 'p
 }
 
 export default function Home() {
+  const clients = useCounselingStore((state) => state.clients);
+  const records = useCounselingStore((state) => state.records);
+  const recentRecords = [...records].sort((a, b) => b.sessionDate.localeCompare(a.sessionDate)).slice(0, 5).map((record) => ({
+    ...record,
+    client: clients.find((client) => client.id === record.clientId),
+  }));
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -80,13 +84,13 @@ export default function Home() {
           <div className="section-heading"><div><h2>최근 상담 기록</h2><p>최근 업로드하거나 요약한 기록이에요.</p></div><a href="#">전체 보기 <Icon name="arrow" /></a></div>
           <div className="records-table">
             {recentRecords.map((record) => (
-              <a className="record-row" href="#" key={record.name}>
+              <Link className="record-row" href={`/clients/${record.clientId}`} key={record.id}>
                 <span className="record-icon"><Icon name="document" /></span>
-                <span className="record-name"><strong>{record.name}</strong><small>{record.client}</small></span>
-                <span className="record-date">{record.date}</span>
-                <span className={`record-status ${record.status === '처리 중' ? 'processing' : ''}`}>{record.status}</span>
+                <span className="record-name"><strong>{record.title}</strong><small>{record.client?.name ?? '알 수 없는 내담자'}</small></span>
+                <span className="record-date">{new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' }).format(new Date(record.sessionDate))}</span>
+                <span className={`record-status ${record.summaryStatus === 'pending' ? 'processing' : ''}`}>{record.summaryStatus === 'completed' ? '요약 완료' : record.summaryStatus === 'pending' ? '처리 중' : '기록 완료'}</span>
                 <Icon name="arrow" />
-              </a>
+              </Link>
             ))}
           </div>
         </section>
