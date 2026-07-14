@@ -64,6 +64,19 @@ export default function NewRecordPage() {
             </div>
           </section>
 
+          <section className="form-card">
+            <div className="form-card-heading"><span>3</span><div><h2>가족사항</h2><p>클라이언트 가족의 기본 정보와 동거 여부를 입력해 주세요.</p></div></div>
+            <div className="form-grid">
+              <label className="field"><span>관계</span><input name="familyRelationship" placeholder="예: 배우자, 자녀" /></label>
+              <label className="field"><span>이름</span><input name="familyName" placeholder="이름 입력" /></label>
+              <label className="field"><span>성별</span><select name="familyGender" defaultValue=""><option value="" disabled>성별 선택</option><option value="male">남성</option><option value="female">여성</option><option value="other">기타</option><option value="not-disclosed">응답하지 않음</option></select></label>
+              <label className="field"><span>생년월일</span><input name="familyBirthDate" type="date" /></label>
+              <label className="field"><span>직업</span><input name="familyOccupation" placeholder="직업 입력" /></label>
+              <label className="field"><span>동거여부</span><select name="familyCohabitation" defaultValue=""><option value="" disabled>동거여부 선택</option><option value="yes">동거</option><option value="no">비동거</option></select></label>
+              <label className="field full"><span>특이사항</span><textarea className="compact-textarea" name="familyNotes" rows={4} placeholder="건강 상태, 관계 특성 등 참고할 내용을 입력해 주세요." /></label>
+            </div>
+          </section>
+
           <section className="summary-option">
             <span className="option-icon"><Icon name="sparkle" /></span>
             <div><strong>저장 후 AI 요약 생성</strong><p>핵심 상담 내용, 개입 사항과 다음 상담 확인 사항을 자동으로 정리해요.</p></div>
