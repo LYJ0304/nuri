@@ -8,16 +8,115 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id           String     @id @default(cuid())
+  email        String     @unique
   passwordHash String
-  status UserStatus @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  cases                 Case[]                 @relation("CaseCounselor")
+  consultations         Consultation[]         @relation("ConsultationCounselor")
+  consultationRevisions ConsultationRevision[]
+  auditLogs             AuditLog[]
+}
+
+model Case {
+  id              String     @id @default(cuid())
+  counselorId     String
+  title           String
+  clientName      String
+  clientPhone     String?
+  clientEmail     String?
+  clientBirthDate DateTime?  @db.Date
+  clientAddress   String?
+  clientMemo      String?
+  status          CaseStatus @default(OPEN)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  counselor     User           @relation("CaseCounselor", fields: [counselorId], references: [id])
+  consultations Consultation[]
+
+  @@index([counselorId, status, updatedAt])
+}
+
+model Consultation {
+  id              String              @id @default(cuid())
+  caseId          String
+  counselorId     String
+  occurredAt      DateTime
+  durationMinutes Int?
+  channel         ConsultationChannel
+  status          ConsultationStatus  @default(DRAFT)
+  subject         String?
+  summary         String?
+  version         Int                 @default(1)
+  finalizedAt     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  case      Case                   @relation(fields: [caseId], references: [id])
+  counselor User                   @relation("ConsultationCounselor", fields: [counselorId], references: [id])
+  revisions ConsultationRevision[]
+
+  @@index([caseId, occurredAt])
+  @@index([counselorId, occurredAt])
+}
+
+model ConsultationRevision {
+  id             String   @id @default(cuid())
+  consultationId String
+  revision       Int
+  content        Json
+  changeReason   String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  consultation Consultation @relation(fields: [consultationId], references: [id])
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@unique([consultationId, revision])
+  @@index([consultationId, createdAt])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorId      String
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@index([resourceType, resourceId])
 }
 
 enum UserStatus {
   ACTIVE
   SUSPENDED
   DEACTIVATED
+}
+
+enum CaseStatus {
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+enum ConsultationChannel {
+  IN_PERSON
+  PHONE
+  VIDEO
+  OTHER
+}
+
+enum ConsultationStatus {
+  DRAFT
+  FINALIZED
+  AMENDED
 }
