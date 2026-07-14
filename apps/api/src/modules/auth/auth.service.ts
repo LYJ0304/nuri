@@ -4,7 +4,6 @@ import * as argon2 from 'argon2';
 import { UserService } from '../users/users.service';
 import { SignInDto } from '../dto/sign-in.dto';
 import { SignUpDto } from '../dto/sign-up.dto';
-import { domainToASCII } from 'url';
 
 @Injectable()
 export class AuthService {
