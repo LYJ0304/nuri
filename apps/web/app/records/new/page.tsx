@@ -19,11 +19,11 @@ export default function NewRecordPage() {
   const addClient = useCounselingStore((state) => state.addClient);
   const setSessionDraft = useCounselingStore((state) => state.setSessionDraft);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const value = (name: string) => String(form.get(name) ?? '');
-    const client = addClient({
+    const client = await addClient({
       name: value('clientName'), birthDate: value('birthDate'), gender: value('gender'), occupation: value('occupation'), phoneNumber: value('phoneNumber'), address: value('address'),
       protectionCategory: value('protectionCategory'), householdType: value('householdType'), hasDisability: value('hasDisability'), longTermCare: value('longTermCare'), emergencyContact: value('emergencyContact'),
       housingType: value('housingType'), housingOwnership: value('housingOwnership'), familyRelationship: value('familyRelationship'), familyName: value('familyName'), familyGender: value('familyGender'),

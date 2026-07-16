@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 import { useCounselingStore } from '../../../stores/counseling-store';
 
@@ -28,10 +29,15 @@ function formatDate(value: string) {
 
 export default function ClientRecordsPage() {
   const { clientId } = useParams<{ clientId: string }>();
+  const load = useCounselingStore((state) => state.load);
+  const status = useCounselingStore((state) => state.status);
   const client = useCounselingStore((state) => state.clients.find((item) => item.id === clientId));
   const allRecords = useCounselingStore((state) => state.records);
   const records = allRecords.filter((record) => record.clientId === clientId).sort((a, b) => b.sessionDate.localeCompare(a.sessionDate));
 
+  useEffect(() => { void load(); }, [load]);
+
+  if (!client && (status === 'idle' || status === 'loading')) return <main className="client-page"><div className="record-container empty-state"><p>내담자 정보를 불러오고 있습니다.</p></div></main>;
   if (!client) return <main className="client-page"><div className="record-container empty-state"><h1>내담자를 찾을 수 없습니다.</h1><Link className="primary-button" href="/">홈으로 돌아가기</Link></div></main>;
   const latest = records[0];
 

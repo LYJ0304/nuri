@@ -8,6 +8,7 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "db:migrate": "pnpm --filter @nuri/api db:migrate",
+    "db:seed": "pnpm --filter @nuri/api db:seed",
     "docker:up": "docker compose --env-file .env -f infra/docker-compose.yml up --build",
     "docker:down": "docker compose --env-file .env -f infra/docker-compose.yml down"
   },

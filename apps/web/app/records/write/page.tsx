@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 
 import { useCounselingStore } from '../../../stores/counseling-store';
 
@@ -21,7 +21,9 @@ function Icon({ name }: { name: 'back' | 'lock' | 'sparkle' | 'upload' | 'user' 
 function WriteRecordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedClientId = searchParams.get('clientId') ?? 'kim-minseo';
+  const requestedClientId = searchParams.get('clientId') ?? '';
+  const load = useCounselingStore((state) => state.load);
+  const status = useCounselingStore((state) => state.status);
   const client = useCounselingStore((state) => state.clients.find((item) => item.id === requestedClientId));
   const allRecords = useCounselingStore((state) => state.records);
   const records = allRecords.filter((record) => record.clientId === requestedClientId);
@@ -29,19 +31,25 @@ function WriteRecordForm() {
   const addRecord = useCounselingStore((state) => state.addRecord);
   const setSessionDraft = useCounselingStore((state) => state.setSessionDraft);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  useEffect(() => { void load(); }, [load]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!client) return;
     const form = new FormData(event.currentTarget);
     const value = (name: string) => String(form.get(name) ?? '');
     const sessionNumber = sessionDraft?.sessionNumber ?? records.length + 1;
-    addRecord({
-      clientId: client.id, title: value('title'), sessionDate: value('sessionDate'), sessionType: value('sessionType'), sessionNumber,
+    await addRecord(client.id, {
+      title: value('title'), sessionDate: value('sessionDate'), sessionType: value('sessionType'), sessionNumber,
       presentingConcern: value('presentingConcern'), sessionContent: value('sessionContent'), counselorObservation: value('counselorObservation'), intervention: value('intervention'),
       riskLevel: value('riskLevel') as 'none' | 'attention' | 'urgent', followUpPlan: value('followUpPlan'), summaryStatus: form.get('generateSummary') ? 'pending' : 'not-requested',
     });
     setSessionDraft(null);
     router.push(`/clients/${client.id}`);
+  }
+
+  if (!client && (status === 'idle' || status === 'loading')) {
+    return <main className="record-page"><div className="record-container empty-state"><p>내담자 정보를 불러오고 있습니다.</p></div></main>;
   }
 
   if (!client) {
