@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 
 import { HealthCheck } from './health-check';
 import { useCounselingStore } from '../stores/counseling-store';
@@ -18,8 +19,10 @@ function Icon({ name }: { name: 'document' | 'sparkle' | 'folder' | 'arrow' | 'p
 }
 
 export default function Home() {
+  const load = useCounselingStore((state) => state.load);
   const clients = useCounselingStore((state) => state.clients);
   const records = useCounselingStore((state) => state.records);
+  useEffect(() => { void load(); }, [load]);
   const recentRecords = [...records].sort((a, b) => b.sessionDate.localeCompare(a.sessionDate)).slice(0, 5).map((record) => ({
     ...record,
     client: clients.find((client) => client.id === record.clientId),

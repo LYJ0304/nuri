@@ -1,55 +1,37 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import {
-  CaseListQuerySchema,
-  CreateCaseRequestSchema,
-  UpdateCaseRequestSchema,
-  type CaseListQuery,
-  type CreateCaseRequest,
-  type UpdateCaseRequest,
-} from '@nuri/contracts';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { CurrentUser } from '../decorators/current-user.decorator';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import type { AuthenticatedUser } from '../types/authenticated-user.type';
+import { BadRequestException, Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { CreateClientRequestSchema, CreateCounselingRecordRequestSchema } from '@nuri/contracts';
 import { CasesService } from './cases.service';
 
-@Controller('cases')
-@UseGuards(JwtAuthGuard)
+@Controller()
 export class CasesController {
   constructor(private readonly casesService: CasesService) {}
 
-  @Post()
-  create(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body(new ZodValidationPipe(CreateCaseRequestSchema))
-    body: CreateCaseRequest,
-  ) {
-    return this.casesService.create(user.userId, body);
+  @Get('clients')
+  listClients() {
+    return this.casesService.listClients();
   }
 
-  @Get()
-  findMany(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query(new ZodValidationPipe(CaseListQuerySchema)) query: CaseListQuery,
-  ) {
-    return this.casesService.findMany(user.userId, query);
+  @Get('clients/:clientId')
+  getClient(@Param('clientId') clientId: string) {
+    return this.casesService.getClient(clientId);
   }
 
-  @Get(':caseId')
-  findOne(
-    @Param('caseId') caseId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.casesService.findOne(caseId, user.userId);
+  @Post('clients')
+  createClient(@Body() body: unknown) {
+    const parsed = CreateClientRequestSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
+    return this.casesService.createClient(parsed.data);
   }
 
-  @Patch(':caseId')
-  update(
-    @Param('caseId') caseId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body(new ZodValidationPipe(UpdateCaseRequestSchema))
-    body: UpdateCaseRequest,
-  ) {
-    return this.casesService.update(caseId, user.userId, body);
+  @Get('clients/:clientId/records')
+  listRecords(@Param('clientId') clientId: string) {
+    return this.casesService.listRecords(clientId);
+  }
+
+  @Post('clients/:clientId/records')
+  createRecord(@Param('clientId') clientId: string, @Body() body: unknown) {
+    const parsed = CreateCounselingRecordRequestSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
+    return this.casesService.createRecord(clientId, parsed.data);
   }
 }
