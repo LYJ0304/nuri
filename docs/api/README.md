@@ -10,7 +10,7 @@
 
 - NestJS 11
 - Prisma 6와 PostgreSQL
-- JWT Bearer 인증
+- 짧은 JWT Bearer access token과 HttpOnly cookie 기반 refresh token
 - Argon2 비밀번호 hashing
 - class-validator 기반 인증 DTO
 - `@nuri/contracts` Zod 스키마 기반 사례·상담 요청 검증
@@ -21,13 +21,24 @@
 
 | 모듈 | 현재 상태 |
 | --- | --- |
-| `auth` | 회원가입, 로그인, 현재 사용자 조회 구현 |
+| `auth` | 회원가입, 로그인, refresh rotation, 로그아웃, 세션 조회·폐기 구현 |
 | `users` | 이메일·ID 조회, 사용자 생성 구현 |
 | `cases` | 사례 CRUD 일부와 상담 기록 lifecycle 구현 |
 | `audit-logs` | 상담 변경 감사 로그 작성 구현 |
 | `organizations` | 빈 module placeholder |
 | `documents` | 빈 module placeholder |
 | `ai-jobs` | 빈 module placeholder |
+
+## 현재 적용된 인증·권한 변경
+
+- 모든 보호 API는 JWT access token을 검증하며 `@Public()` endpoint만 인증을 생략한다.
+- `Client`는 `counselorId`로 소유 상담사와 연결되고, `CounselingRecord`는 부모 Client의 소유권을 상속한다.
+- Client와 CounselingRecord 조회 조건에 현재 사용자의 `counselorId`를 함께 포함한다. 다른 상담사의 ID로 접근하면 `404 Not Found`를 반환한다.
+- 로그인 시 짧은 access token과 긴 refresh token을 발급한다. refresh token 원문은 응답 본문이나 DB에 저장하지 않는다.
+- refresh 요청마다 token을 rotation하고 이전 token의 재사용 또는 동시 사용이 감지되면 해당 세션을 폐기한다.
+- 현재 세션 로그아웃, 전체 기기 로그아웃, 활성 세션 목록 조회, 개별 세션 폐기를 지원한다.
+- access token은 `AuthSession`과 연결된다. 세션이 폐기되거나 사용자가 비활성화되면 아직 만료되지 않은 access token도 거부한다.
+- refresh cookie 관련 요청은 허용된 Web origin을 검증하고 credential CORS를 사용한다.
 
 ## 환경 변수
 
@@ -42,7 +53,6 @@
 | `JWT_REFRESH_EXPIRES_IN` | 아니요 | refresh token 만료시간, 기본값 `30d` |
 | `API_PORT` | 아니요 | 기본값 `3001` |
 | `WEB_ORIGIN` | 아니요 | CORS origin, 기본값 `http://localhost:3000` |
-
 
 `.env.example`의 JWT secret은 로컬 구성 형식을 보여 주는 개발용 placeholder다. 운영 환경에서는 access와 refresh에 서로 다른 32자 이상의 secret을 주입하고 실제 secret을 저장소에 커밋하면 안 된다.
 
@@ -214,7 +224,7 @@ User
 
 ## Migration
 
-스키마는 `apps/api/prisma/schema.prisma`, migration은 `apps/api/prisma/migrations`에서 관리한다. 현재 첫 migration은 빈 데이터베이스에 사용자, 사례, 상담, 개정, 감사 로그 테이블을 생성한다.
+스키마는 `apps/api/prisma/schema.prisma`, migration은 `apps/api/prisma/migrations`에서 관리한다. 현재 migration에는 사용자·사례·상담·개정·감사 로그 테이블, Client 소유자 연결, refresh 인증 세션 저장소가 포함된다.
 
 새 데이터베이스에 커밋된 migration을 적용하려면:
 
@@ -244,8 +254,7 @@ pnpm --filter @nuri/api build
 
 - Web 인증 및 사례·상담 API 연결
 - 사례 `CLOSED`/`ARCHIVED` 상태 변경 API
-- API endpoint 단위·통합 테스트
-- access token 갱신 및 폐기 정책
+- 인증 endpoint 통합 테스트와 실제 브라우저 cookie 흐름 검증
 - Redis 기반 AI job queue
 - 문서 metadata 및 MinIO 저장 흐름
 - 내담자 개인정보 암호화·마스킹 정책
