@@ -8,6 +8,7 @@ const compact = <T extends Record<string, unknown>>(value: T) =>
 
 const serializeClient = (client: Record<string, unknown>) => compact({
   ...client,
+  counselorId: undefined,
   birthDate: client.birthDate instanceof Date ? client.birthDate.toISOString().slice(0, 10) : client.birthDate,
   familyBirthDate: client.familyBirthDate instanceof Date ? client.familyBirthDate.toISOString().slice(0, 10) : client.familyBirthDate,
   createdAt: client.createdAt instanceof Date ? client.createdAt.toISOString() : client.createdAt,
@@ -27,21 +28,27 @@ const serializeRecord = (record: Record<string, unknown>) => compact({
 export class CasesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listClients() {
-    const clients = await this.prisma.client.findMany({ orderBy: { createdAt: 'desc' } });
+  async listClients(counselorId: string) {
+    const clients = await this.prisma.client.findMany({
+      where: { counselorId },
+      orderBy: { createdAt: 'desc' },
+    });
     return clients.map(serializeClient);
   }
 
-  async getClient(clientId: string) {
-    const client = await this.prisma.client.findUnique({ where: { id: clientId } });
+  async getClient(clientId: string, counselorId: string) {
+    const client = await this.prisma.client.findFirst({
+      where: { id: clientId, counselorId },
+    });
     if (!client) throw new NotFoundException('Client not found');
     return serializeClient(client);
   }
 
-  async createClient(input: CreateClientRequest) {
+  async createClient(counselorId: string, input: CreateClientRequest) {
     const client = await this.prisma.client.create({
       data: {
         ...input,
+        counselorId,
         birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00.000Z`) : undefined,
         familyBirthDate: input.familyBirthDate ? new Date(`${input.familyBirthDate}T00:00:00.000Z`) : undefined,
       },
@@ -49,14 +56,18 @@ export class CasesService {
     return serializeClient(client);
   }
 
-  async listRecords(clientId: string) {
-    await this.ensureClient(clientId);
+  async listRecords(clientId: string, counselorId: string) {
+    await this.ensureOwnedClient(clientId, counselorId);
     const records = await this.prisma.counselingRecord.findMany({ where: { clientId }, orderBy: { sessionDate: 'desc' } });
     return records.map(serializeRecord);
   }
 
-  async createRecord(clientId: string, input: CreateCounselingRecordRequest) {
-    await this.ensureClient(clientId);
+  async createRecord(
+    clientId: string,
+    counselorId: string,
+    input: CreateCounselingRecordRequest,
+  ) {
+    await this.ensureOwnedClient(clientId, counselorId);
     const record = await this.prisma.counselingRecord.create({
       data: {
         ...input,
@@ -69,8 +80,11 @@ export class CasesService {
     return serializeRecord(record);
   }
 
-  private async ensureClient(clientId: string) {
-    const client = await this.prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
+  private async ensureOwnedClient(clientId: string, counselorId: string) {
+    const client = await this.prisma.client.findFirst({
+      where: { id: clientId, counselorId },
+      select: { id: true },
+    });
     if (!client) throw new NotFoundException('Client not found');
   }
 }
