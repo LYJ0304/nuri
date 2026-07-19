@@ -46,6 +46,21 @@
 
 `LoginSecurityEvent`는 성공, 실패, rate limit 차단을 기록한다. 원문 이메일 대신 SHA-256 hash를 저장하고 선택적 사용자 ID, IP, user agent, 결과와 사유를 남긴다. IP·계정·사용자와 시각 기준 index는 향후 새로운 기기, 지역 급변, 대량 실패 같은 비정상 로그인 탐지에 사용할 수 있다. 보안 이벤트의 보존 기간과 자동 정리는 운영 정책 확정 후 추가해야 한다.
 
+브라우저 요청은 Next.js `/api` rewrite를 거쳐 API에 도달한다. API는 `TRUSTED_PROXY_IPS`에 명시된 프록시의 `X-Forwarded-For`만 신뢰하며, Compose에서는 고정된 web 컨테이너 주소 `172.30.0.10`만 추가로 신뢰한다. `trust proxy: true`나 전체 사설망 CIDR은 외부에서 전달 헤더를 위조할 여지를 만들 수 있으므로 사용하지 않는다. 프록시 또는 네트워크 구성을 바꾸면 실제 API 직전 프록시 주소만 이 값에 추가해야 한다.
+
+### 로그인 IP 제한 문제 해결 기록
+
+증상은 서로 다른 사용자의 로그인이 모두 같은 IP로 기록되고, 배포 전체가 15분 안에 로그인 이벤트 30건을 만든 뒤 정상 계정까지 `401`로 차단되는 것이었다. IP 제한 쿼리는 성공과 실패를 포함한 모든 `LoginSecurityEvent`를 세므로 영향이 전체 로그인으로 빠르게 확산됐다.
+
+원인은 Express가 기본적으로 프록시를 신뢰하지 않아 `request.ip`가 `X-Forwarded-For`의 브라우저 IP가 아니라 Next.js 서버의 socket IP를 반환한 것이었다. 다음 순서로 확인할 수 있다.
+
+1. 브라우저 로그인 경로가 `NEXT_PUBLIC_API_URL=/api`이고 `next.config.ts` rewrite가 내부 API로 전달하는지 확인한다.
+2. `LoginSecurityEvent.ipAddress`를 사용자별로 비교해 모두 web 컨테이너 주소인지 확인한다.
+3. API의 `TRUSTED_PROXY_IPS`가 API에 직접 연결하는 Next.js 주소와 일치하는지 확인한다.
+4. 수정 후 서로 다른 클라이언트 IP를 가진 요청이 서로 다른 `ipAddress`로 저장되고, 한 IP의 30건이 다른 IP 로그인을 차단하지 않는지 확인한다.
+
+해결은 API 부트스트랩에서 Express `trust proxy`를 정확한 프록시 주소 목록으로 설정하는 것이다. 그러면 기존 컨트롤러의 `request.ip`가 신뢰된 프록시 체인을 기준으로 전달된 클라이언트 IP를 반환한다. 운영 환경에서 로드 밸런서가 Next.js 앞이나 API 앞에 추가되면 hop 수를 임의로 지정하지 말고, API에 직접 연결하는 프록시 주소를 `TRUSTED_PROXY_IPS`에 쉼표로 구분해 명시한다.
+
 ## 환경 변수
 
 | 변수 | 필수 | 설명 |
@@ -59,6 +74,7 @@
 | `JWT_REFRESH_EXPIRES_IN` | 아니요 | refresh token 만료시간, 기본값 `30d` |
 | `API_PORT` | 아니요 | 기본값 `3001` |
 | `WEB_ORIGIN` | 아니요 | CORS origin, 기본값 `http://localhost:3000` |
+| `TRUSTED_PROXY_IPS` | 아니요 | 쉼표로 구분한 API 직전 신뢰 프록시 주소, 기본값 `loopback` |
 
 `.env.example`의 JWT secret은 로컬 구성 형식을 보여 주는 개발용 placeholder다. 운영 환경에서는 access와 refresh에 서로 다른 32자 이상의 secret을 주입하고 실제 secret을 저장소에 커밋하면 안 된다.
 
