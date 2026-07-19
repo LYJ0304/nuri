@@ -16,6 +16,10 @@ class EnvironmentVariables {
   @IsUrl({ require_tld: false })
   WEB_ORIGIN = 'http://localhost:3000';
 
+  @IsString()
+  @MinLength(1)
+  TRUSTED_PROXY_IPS = 'loopback';
+
   @IsInt() @Min(1) @Max(65535) API_PORT = 3001;
   @IsString() @MinLength(32) JWT_ACCESS_SECRET!: string;
   @IsString() @Matches(/^\d+[smhd]$/) JWT_ACCESS_EXPIRES_IN = '15m';

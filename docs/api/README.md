@@ -37,8 +37,29 @@
 - 로그인 시 짧은 access token과 긴 refresh token을 발급한다. refresh token 원문은 응답 본문이나 DB에 저장하지 않는다.
 - refresh 요청마다 token을 rotation하고 이전 token의 재사용 또는 동시 사용이 감지되면 해당 세션을 폐기한다.
 - 현재 세션 로그아웃, 전체 기기 로그아웃, 활성 세션 목록 조회, 개별 세션 폐기를 지원한다.
-- access token은 `AuthSession`과 연결된다. 세션이 폐기되거나 사용자가 비활성화되면 아직 만료되지 않은 access token도 거부한다.
+- access token은 `AuthSession`과 연결된다. JWT 검증 시 사용자를 DB에서 다시 조회해 존재 여부와 `ACTIVE` 상태를 확인하고 현재 DB email을 사용한다. 세션이 폐기되거나 만료되거나 사용자가 비활성화되면 아직 만료되지 않은 access token도 거부한다. 조직 membership은 현재 개인 단위 권한 모델이므로 검증하지 않는다.
 - refresh cookie 관련 요청은 허용된 Web origin을 검증하고 credential CORS를 사용한다.
+
+## 로그인 공격 방어
+
+로그인 전에 최근 15분의 보안 이벤트를 조회한다. 같은 IP의 전체 시도가 30회 이상이거나 같은 정규화 이메일의 실패가 5회 이상이면 로그인을 일시적으로 차단한다. 차단·존재하지 않는 이메일·비밀번호 불일치·비활성 계정은 모두 `401 Unauthorized`와 `Invalid email or password` 메시지를 반환한다.
+
+`LoginSecurityEvent`는 성공, 실패, rate limit 차단을 기록한다. 원문 이메일 대신 SHA-256 hash를 저장하고 선택적 사용자 ID, IP, user agent, 결과와 사유를 남긴다. IP·계정·사용자와 시각 기준 index는 향후 새로운 기기, 지역 급변, 대량 실패 같은 비정상 로그인 탐지에 사용할 수 있다. 보안 이벤트의 보존 기간과 자동 정리는 운영 정책 확정 후 추가해야 한다.
+
+브라우저 요청은 Next.js `/api` rewrite를 거쳐 API에 도달한다. API는 `TRUSTED_PROXY_IPS`에 명시된 프록시의 `X-Forwarded-For`만 신뢰하며, Compose에서는 고정된 web 컨테이너 주소 `172.30.0.10`만 추가로 신뢰한다. `trust proxy: true`나 전체 사설망 CIDR은 외부에서 전달 헤더를 위조할 여지를 만들 수 있으므로 사용하지 않는다. 프록시 또는 네트워크 구성을 바꾸면 실제 API 직전 프록시 주소만 이 값에 추가해야 한다.
+
+### 로그인 IP 제한 문제 해결 기록
+
+증상은 서로 다른 사용자의 로그인이 모두 같은 IP로 기록되고, 배포 전체가 15분 안에 로그인 이벤트 30건을 만든 뒤 정상 계정까지 `401`로 차단되는 것이었다. IP 제한 쿼리는 성공과 실패를 포함한 모든 `LoginSecurityEvent`를 세므로 영향이 전체 로그인으로 빠르게 확산됐다.
+
+원인은 Express가 기본적으로 프록시를 신뢰하지 않아 `request.ip`가 `X-Forwarded-For`의 브라우저 IP가 아니라 Next.js 서버의 socket IP를 반환한 것이었다. 다음 순서로 확인할 수 있다.
+
+1. 브라우저 로그인 경로가 `NEXT_PUBLIC_API_URL=/api`이고 `next.config.ts` rewrite가 내부 API로 전달하는지 확인한다.
+2. `LoginSecurityEvent.ipAddress`를 사용자별로 비교해 모두 web 컨테이너 주소인지 확인한다.
+3. API의 `TRUSTED_PROXY_IPS`가 API에 직접 연결하는 Next.js 주소와 일치하는지 확인한다.
+4. 수정 후 서로 다른 클라이언트 IP를 가진 요청이 서로 다른 `ipAddress`로 저장되고, 한 IP의 30건이 다른 IP 로그인을 차단하지 않는지 확인한다.
+
+해결은 API 부트스트랩에서 Express `trust proxy`를 정확한 프록시 주소 목록으로 설정하는 것이다. 그러면 기존 컨트롤러의 `request.ip`가 신뢰된 프록시 체인을 기준으로 전달된 클라이언트 IP를 반환한다. 운영 환경에서 로드 밸런서가 Next.js 앞이나 API 앞에 추가되면 hop 수를 임의로 지정하지 말고, API에 직접 연결하는 프록시 주소를 `TRUSTED_PROXY_IPS`에 쉼표로 구분해 명시한다.
 
 ## 환경 변수
 
@@ -53,6 +74,7 @@
 | `JWT_REFRESH_EXPIRES_IN` | 아니요 | refresh token 만료시간, 기본값 `30d` |
 | `API_PORT` | 아니요 | 기본값 `3001` |
 | `WEB_ORIGIN` | 아니요 | CORS origin, 기본값 `http://localhost:3000` |
+| `TRUSTED_PROXY_IPS` | 아니요 | 쉼표로 구분한 API 직전 신뢰 프록시 주소, 기본값 `loopback` |
 
 `.env.example`의 JWT secret은 로컬 구성 형식을 보여 주는 개발용 placeholder다. 운영 환경에서는 access와 refresh에 서로 다른 32자 이상의 secret을 주입하고 실제 secret을 저장소에 커밋하면 안 된다.
 
@@ -75,7 +97,7 @@
 
 로그인과 refresh 응답 본문에는 access token과 사용자 정보만 포함한다. refresh token은 `nuri_refresh_token` HttpOnly cookie로만 전달하며 최초 로그인 시 정해진 최대 30일 만료를 rotation 후에도 연장하지 않는다. 유효하게 서명된 이전 token이 재사용되거나 같은 token으로 동시 rotation이 발생하면 해당 세션을 폐기한다. access token에는 세션 ID를 포함하며, 보호된 요청마다 세션과 현재 사용자 상태를 확인하므로 로그아웃된 세션의 access token도 즉시 거부한다.
 
-API는 credential CORS를 허용하되 `WEB_ORIGIN` 한 곳만 허용한다. refresh cookie를 설정하거나 소비하는 로그인·refresh·현재 세션 로그아웃 요청은 `Origin` header가 `WEB_ORIGIN`과 정확히 같은 scheme, host, port인지 검사하며 누락·불일치 요청은 `403 Forbidden`으로 거부한다. cookie는 `HttpOnly`, `SameSite=Lax`이고 운영 환경에서는 `Secure`를 사용한다.
+API는 credential CORS를 허용하되 `WEB_ORIGIN` 한 곳만 허용한다. refresh cookie를 설정하거나 소비하는 로그인·refresh·현재 세션 로그아웃 요청은 `Origin` header가 `WEB_ORIGIN`과 정확히 같은 scheme, host, port인지 검사하며 누락·불일치 요청은 `403 Forbidden`으로 거부한다. cookie는 Next middleware에서도 확인할 수 있도록 path `/`에 설정하며 `HttpOnly`, `SameSite=Lax`이고 운영 환경에서는 `Secure`를 사용한다. 브라우저는 Web의 동일 출처 `/api` rewrite를 통해 API를 호출한다.
 
 보호된 API는 다음 header를 요구한다.
 
@@ -207,6 +229,7 @@ DRAFT ── finalize ──> FINALIZED ── amendment ──> AMENDED
 ```text
 User
  ├─ AuthSession
+ ├─ LoginSecurityEvent
  ├─ Client
  │   └─ CounselingRecord
  ├─ Case
@@ -224,7 +247,7 @@ User
 
 ## Migration
 
-스키마는 `apps/api/prisma/schema.prisma`, migration은 `apps/api/prisma/migrations`에서 관리한다. 현재 migration에는 사용자·사례·상담·개정·감사 로그 테이블, Client 소유자 연결, refresh 인증 세션 저장소가 포함된다.
+스키마는 `apps/api/prisma/schema.prisma`, migration은 `apps/api/prisma/migrations`에서 관리한다. 현재 migration에는 사용자·사례·상담·개정·감사 로그 테이블, Client 소유자 연결, refresh 인증 세션 저장소, 로그인 보안 이벤트 저장소가 포함된다.
 
 새 데이터베이스에 커밋된 migration을 적용하려면:
 

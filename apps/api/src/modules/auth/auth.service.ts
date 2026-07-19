@@ -9,6 +9,7 @@ import { SignInDto } from '../dto/sign-in.dto';
 import { SignUpDto } from '../dto/sign-up.dto';
 import { UserService } from '../users/users.service';
 import { hashRefreshToken } from './refresh-token-hash';
+import { LoginProtectionService } from './login-protection.service';
 
 type SessionMetadata = {
   userAgent?: string;
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly loginProtection: LoginProtectionService,
     private readonly prisma: PrismaService,
   ) {
     this.refreshSecret = this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
@@ -58,13 +60,26 @@ export class AuthService {
 
   async signIn(dto: SignInDto, metadata: SessionMetadata): Promise<AuthResult> {
     const normalizedEmail = dto.email.trim().toLowerCase();
+    await this.loginProtection.assertAllowed(normalizedEmail, metadata);
     const user = await this.userService.findByEmail(normalizedEmail);
 
-    if (!user) throw new UnauthorizedException('Invalid email or password');
+    if (!user) {
+      return this.loginProtection.recordFailure(
+        normalizedEmail, null, metadata, 'INVALID_CREDENTIALS',
+      );
+    }
 
     const passwordMatches = await argon2.verify(user.passwordHash, dto.password);
-    if (!passwordMatches) throw new UnauthorizedException('Invalid email or password');
-    if (user.status !== 'ACTIVE') throw new UnauthorizedException('Account is not active');
+    if (!passwordMatches) {
+      return this.loginProtection.recordFailure(
+        normalizedEmail, user.id, metadata, 'INVALID_CREDENTIALS',
+      );
+    }
+    if (user.status !== 'ACTIVE') {
+      return this.loginProtection.recordFailure(
+        normalizedEmail, user.id, metadata, 'ACCOUNT_INACTIVE',
+      );
+    }
 
     const sessionId = randomUUID();
     const refreshToken = await this.signInitialRefreshToken(user.id, sessionId);
@@ -83,6 +98,7 @@ export class AuthService {
       },
     });
 
+    await this.loginProtection.recordSuccess(normalizedEmail, user.id, metadata);
     return result;
   }
 

@@ -19,6 +19,7 @@
 
 | 경로 | 구현 | 설명 |
 | --- | --- | --- |
+| `/login` | `apps/web/app/login/page.tsx` | 상담사 로그인 |
 | `/` | `apps/web/app/page.tsx` | 대시보드, 최근 상담 기록, API health 상태 |
 | `/records/new` | `apps/web/app/records/new/page.tsx` | 내담자 정보와 상담 기본정보 등록 |
 | `/records/write` | `apps/web/app/records/write/page.tsx` | 상담 내용 작성 |
@@ -39,19 +40,28 @@
 
 따라서 현재 UI에 입력하는 개인정보와 상담 기록은 PostgreSQL의 `Case`나 `Consultation`에 저장되지 않는다.
 
+## 인증 및 API 연결
+
+`/login`에서 이메일과 비밀번호로 로그인한다. refresh token은 HttpOnly cookie에 저장하고 access token은 `apps/web/lib/auth-api.ts`의 메모리에만 유지한다. 새로고침 시 refresh endpoint로 인증 상태를 복구한 뒤 `GET /auth/me`로 현재 사용자를 확인한다.
+
+공통 API client는 access token을 Bearer header에 적용한다. 보호 요청이 `401 Unauthorized`를 반환하면 refresh token을 한 번만 rotation하고 원래 요청을 한 번 재시도한다. refresh가 실패하면 access token을 제거하고 `/login`으로 이동한다. 로그아웃은 서버 세션과 refresh cookie를 폐기한 뒤 메모리 인증 상태를 비운다.
+
+`apps/web/middleware.ts`는 refresh cookie가 없는 `/`, `/clients/*`, `/records/*` 초기 요청을 로그인 화면으로 보낸다. middleware의 cookie 존재 확인은 인증 판정 자체가 아니며, 위조·만료·폐기 여부는 NestJS refresh 및 JWT guard가 최종 검증한다.
+
 ## API 연결 상태
 
-현재 실제 API 호출은 `apps/web/app/health-check.tsx`의 `GET /health`뿐이다.
+브라우저는 Next.js rewrite의 동일 출처 `/api` 경로를 통해 NestJS만 호출한다. 현재 health check와 인증 API가 연결되어 있다.
 
 ```text
-NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_API_URL=/api
+API_INTERNAL_URL=http://localhost:3001
 ```
 
 응답은 `HealthResponseSchema`로 검증한다. `NEXT_PUBLIC_*` 환경 변수는 브라우저 번들에 포함되므로 비밀값을 넣으면 안 된다.
 
 사례·상담 저장 기능을 연결할 때는 다음 순서를 권장한다.
 
-1. 로그인 화면과 access token 보관 정책을 결정한다.
+1. 인증된 API 요청에 `apiFetch`를 사용한다.
 2. `/records/new` 입력값을 API `POST /cases` 및 `POST /cases/:caseId/consultations` 계약에 맞춘다.
 3. `/records/write`를 상담 초안 수정 API와 연결한다.
 4. `/clients/[clientId]`를 사례 상세 및 상담 목록 API와 연결한다.
@@ -92,8 +102,7 @@ pnpm --filter @nuri/web build
 
 ## 남은 주요 작업
 
-- 인증 UI와 API access token 처리
-- 사례·상담 API 연동
+- 사례·상담 API를 인증 API client와 연동
 - 로딩, 빈 상태, 오류, `409 Conflict` 처리
 - 상담 확정 및 확정 후 개정 UI
 - 데모 수치와 링크 placeholder 제거

@@ -2,6 +2,7 @@
 
 import { HealthResponseSchema } from '@nuri/contracts';
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../lib/auth-api';
 
 type State = 'checking' | 'healthy' | 'unavailable';
 
@@ -16,7 +17,7 @@ export function HealthCheck() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/health`, {
+    fetch(`${API_BASE_URL}/health`, {
       signal: controller.signal,
     })
       .then((response) => response.json())

@@ -21,6 +21,7 @@ model User {
   consultationRevisions ConsultationRevision[]
   auditLogs             AuditLog[]
   authSessions          AuthSession[]
+  loginSecurityEvents   LoginSecurityEvent[]
 }
 
 model AuthSession {
@@ -38,6 +39,23 @@ model AuthSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt, expiresAt])
+}
+
+model LoginSecurityEvent {
+  id        String               @id @default(cuid())
+  userId    String?
+  emailHash String
+  ipAddress String
+  userAgent String?
+  outcome   LoginSecurityOutcome
+  reason    String?
+  createdAt DateTime             @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ipAddress, createdAt])
+  @@index([emailHash, outcome, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Case {
@@ -165,6 +183,12 @@ model CounselingRecord {
   updatedAt            DateTime      @updatedAt
 
   @@index([clientId, sessionDate])
+}
+
+enum LoginSecurityOutcome {
+  SUCCESS
+  FAILURE
+  BLOCKED
 }
 
 enum UserStatus {

@@ -10,12 +10,13 @@ import { UserService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import { readRefreshTokenCookie } from './refresh-token-cookie';
 import { hashRefreshToken } from './refresh-token-hash';
+import { LoginProtectionService } from './login-protection.service';
 
 type TestUser = {
   id: string;
   email: string;
   passwordHash: string;
-  status: 'ACTIVE';
+  status: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
   createdAt: Date;
   updatedAt: Date;
 };
@@ -90,6 +91,7 @@ async function createHarness() {
         if (!session || (where.id && session.id !== where.id) || (where.userId && session.userId !== where.userId)) return null;
         if (where.revokedAt === null && session.revokedAt !== null) return null;
         if (where.expiresAt && session.expiresAt <= where.expiresAt.gt) return null;
+        if (user.status !== 'ACTIVE') return null;
         return { ...session, user };
       },
       findMany: async () => {
@@ -119,7 +121,12 @@ async function createHarness() {
     secret: 'access-secret-for-auth-service-tests',
     signOptions: { expiresIn: '15m' },
   });
-  const service = new AuthService(userService, jwt, config, prisma);
+  const loginProtection = {
+    assertAllowed: async () => Promise.resolve(),
+    recordFailure: () => Promise.reject(new UnauthorizedException('Invalid email or password')),
+    recordSuccess: async () => Promise.resolve(),
+  } as unknown as LoginProtectionService;
+  const service = new AuthService(userService, jwt, config, loginProtection, prisma);
 
   return {
     password,
@@ -204,7 +211,7 @@ void test('lists active sessions without token hashes and revokes owned sessions
   await harness.service.signOut(signedIn.refreshToken);
 });
 
-void test('rejects access tokens as soon as all sessions are revoked', async () => {
+void test('uses current user data and rejects inactive or revoked sessions', async () => {
   const harness = await createHarness();
   const signedIn = await harness.service.signIn(
     { email: 'counselor@example.com', password: harness.password },
@@ -217,7 +224,14 @@ void test('rejects access tokens as soon as all sessions are revoked', async () 
   }>(signedIn.response.accessToken);
   const strategy = new JwtStrategy(harness.config, harness.prisma);
 
-  assert.equal((await strategy.validate(payload)).sessionId, payload.sid);
+  payload.email = 'stale-email.com';
+  const authenticated = await strategy.validate(payload);
+  assert.equal(authenticated.sessionId, payload.sid);
+  assert.equal(authenticated.email, harness.user.email);
+
+  harness.user.status = 'SUSPENDED';
+  await assert.rejects(() => strategy.validate(payload), UnauthorizedException);
+  harness.user.status = 'ACTIVE';
   await harness.service.signOutAll(harness.user.id);
   await assert.rejects(() => strategy.validate(payload), UnauthorizedException);
 });
