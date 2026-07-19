@@ -40,6 +40,12 @@
 - access token은 `AuthSession`과 연결된다. JWT 검증 시 사용자를 DB에서 다시 조회해 존재 여부와 `ACTIVE` 상태를 확인하고 현재 DB email을 사용한다. 세션이 폐기되거나 만료되거나 사용자가 비활성화되면 아직 만료되지 않은 access token도 거부한다. 조직 membership은 현재 개인 단위 권한 모델이므로 검증하지 않는다.
 - refresh cookie 관련 요청은 허용된 Web origin을 검증하고 credential CORS를 사용한다.
 
+## 로그인 공격 방어
+
+로그인 전에 최근 15분의 보안 이벤트를 조회한다. 같은 IP의 전체 시도가 30회 이상이거나 같은 정규화 이메일의 실패가 5회 이상이면 로그인을 일시적으로 차단한다. 차단·존재하지 않는 이메일·비밀번호 불일치·비활성 계정은 모두 `401 Unauthorized`와 `Invalid email or password` 메시지를 반환한다.
+
+`LoginSecurityEvent`는 성공, 실패, rate limit 차단을 기록한다. 원문 이메일 대신 SHA-256 hash를 저장하고 선택적 사용자 ID, IP, user agent, 결과와 사유를 남긴다. IP·계정·사용자와 시각 기준 index는 향후 새로운 기기, 지역 급변, 대량 실패 같은 비정상 로그인 탐지에 사용할 수 있다. 보안 이벤트의 보존 기간과 자동 정리는 운영 정책 확정 후 추가해야 한다.
+
 ## 환경 변수
 
 | 변수 | 필수 | 설명 |
@@ -207,6 +213,7 @@ DRAFT ── finalize ──> FINALIZED ── amendment ──> AMENDED
 ```text
 User
  ├─ AuthSession
+ ├─ LoginSecurityEvent
  ├─ Client
  │   └─ CounselingRecord
  ├─ Case
@@ -224,7 +231,7 @@ User
 
 ## Migration
 
-스키마는 `apps/api/prisma/schema.prisma`, migration은 `apps/api/prisma/migrations`에서 관리한다. 현재 migration에는 사용자·사례·상담·개정·감사 로그 테이블, Client 소유자 연결, refresh 인증 세션 저장소가 포함된다.
+스키마는 `apps/api/prisma/schema.prisma`, migration은 `apps/api/prisma/migrations`에서 관리한다. 현재 migration에는 사용자·사례·상담·개정·감사 로그 테이블, Client 소유자 연결, refresh 인증 세션 저장소, 로그인 보안 이벤트 저장소가 포함된다.
 
 새 데이터베이스에 커밋된 migration을 적용하려면:
 

@@ -12,6 +12,7 @@ import { TrustedOriginGuard } from '../guards/trusted-origin.guard';
 import { JwtStrategy } from '../strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { LoginProtectionService } from './login-protection.service';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AuthService } from './auth.service';
   controllers: [AuthController],
   providers: [
     AuthService,
+    LoginProtectionService,
     JwtStrategy,
     JwtAuthGuard,
     TrustedOriginGuard,

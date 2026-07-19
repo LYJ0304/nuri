@@ -10,6 +10,7 @@ import { UserService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import { readRefreshTokenCookie } from './refresh-token-cookie';
 import { hashRefreshToken } from './refresh-token-hash';
+import { LoginProtectionService } from './login-protection.service';
 
 type TestUser = {
   id: string;
@@ -120,7 +121,12 @@ async function createHarness() {
     secret: 'access-secret-for-auth-service-tests',
     signOptions: { expiresIn: '15m' },
   });
-  const service = new AuthService(userService, jwt, config, prisma);
+  const loginProtection = {
+    assertAllowed: async () => Promise.resolve(),
+    recordFailure: () => Promise.reject(new UnauthorizedException('Invalid email or password')),
+    recordSuccess: async () => Promise.resolve(),
+  } as unknown as LoginProtectionService;
+  const service = new AuthService(userService, jwt, config, loginProtection, prisma);
 
   return {
     password,
