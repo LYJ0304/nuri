@@ -8,7 +8,6 @@ import { PassportModule } from '@nestjs/passport';
 
 import { UsersModule } from '../users/users.module';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import { TrustedOriginGuard } from '../guards/trusted-origin.guard';
 import { JwtStrategy } from '../strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -37,7 +36,6 @@ import { AuthService } from './auth.service';
     AuthService,
     JwtStrategy,
     JwtAuthGuard,
-    TrustedOriginGuard,
   ],
   exports: [
     AuthService,

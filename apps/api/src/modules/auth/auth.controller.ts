@@ -18,7 +18,6 @@ import { Public } from '../decorators/public.decorator';
 import { SignInDto } from '../dto/sign-in.dto';
 import { SignUpDto } from '../dto/sign-up.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import { TrustedOriginGuard } from '../guards/trusted-origin.guard';
 import type { AuthenticatedUser } from '../types/authenticated-user.type';
 import { AuthService } from './auth.service';
 import {
@@ -46,7 +45,6 @@ export class AuthController {
 
   @Public()
   @Post('sign-in')
-  @UseGuards(TrustedOriginGuard)
   @HttpCode(HttpStatus.OK)
   async signIn(
     @Body() dto: SignInDto,
@@ -68,7 +66,6 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
-  @UseGuards(TrustedOriginGuard)
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Req() request: Request,
@@ -88,7 +85,6 @@ export class AuthController {
 
   @Public()
   @Post('sign-out')
-  @UseGuards(TrustedOriginGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async signOut(
     @Req() request: Request,

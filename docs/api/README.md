@@ -43,7 +43,6 @@
 | `API_PORT` | 아니요 | 기본값 `3001` |
 | `WEB_ORIGIN` | 아니요 | CORS origin, 기본값 `http://localhost:3000` |
 
-
 `.env.example`의 JWT secret은 로컬 구성 형식을 보여 주는 개발용 placeholder다. 운영 환경에서는 access와 refresh에 서로 다른 32자 이상의 secret을 주입하고 실제 secret을 저장소에 커밋하면 안 된다.
 
 ## 인증 세션 저장소
@@ -64,8 +63,6 @@
 | `GET` | `/auth/me` | Bearer | token의 현재 사용자 정보 반환 |
 
 로그인과 refresh 응답 본문에는 access token과 사용자 정보만 포함한다. refresh token은 `nuri_refresh_token` HttpOnly cookie로만 전달하며 최초 로그인 시 정해진 최대 30일 만료를 rotation 후에도 연장하지 않는다. 유효하게 서명된 이전 token이 재사용되거나 같은 token으로 동시 rotation이 발생하면 해당 세션을 폐기한다. access token에는 세션 ID를 포함하며, 보호된 요청마다 세션과 현재 사용자 상태를 확인하므로 로그아웃된 세션의 access token도 즉시 거부한다.
-
-API는 credential CORS를 허용하되 `WEB_ORIGIN` 한 곳만 허용한다. refresh cookie를 설정하거나 소비하는 로그인·refresh·현재 세션 로그아웃 요청은 `Origin` header가 `WEB_ORIGIN`과 정확히 같은 scheme, host, port인지 검사하며 누락·불일치 요청은 `403 Forbidden`으로 거부한다. cookie는 `HttpOnly`, `SameSite=Lax`이고 운영 환경에서는 `Secure`를 사용한다.
 
 보호된 API는 다음 header를 요구한다.
 
