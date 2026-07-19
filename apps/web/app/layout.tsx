@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './styles.css';
+import { AuthProvider } from './auth-provider';
 
 export const metadata: Metadata = {
   title: 'Nuri | 상담 기록을 더 간결하게',
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ko"><body>{children}</body></html>;
+  return <html lang="ko"><body><AuthProvider>{children}</AuthProvider></body></html>;
 }

@@ -12,6 +12,7 @@ import {
 } from '@nuri/contracts';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { apiFetch } from '../lib/auth-api';
 
 export type { Client, CounselingRecord } from '@nuri/contracts';
 export type SessionDraft = Pick<CounselingRecord, 'clientId' | 'title' | 'sessionDate' | 'sessionType' | 'sessionNumber'>;
@@ -28,10 +29,8 @@ type CounselingStore = {
   setSessionDraft: (draft: SessionDraft | null) => void;
 };
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
 async function request(path: string, init?: RequestInit) {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await apiFetch(path, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });

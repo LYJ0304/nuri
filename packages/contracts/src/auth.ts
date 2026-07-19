@@ -10,6 +10,11 @@ export const AuthTokenResponseSchema = z.object({
   user: AuthUserSchema,
 });
 
+export const AuthenticatedUserSchema = z.object({
+  userId: z.string(),
+  email: z.string().email(),
+});
+
 export const AuthSessionSchema = z.object({
   id: z.string(),
   userAgent: z.string().nullable(),
@@ -24,5 +29,6 @@ export const AuthSessionListResponseSchema = z.array(AuthSessionSchema);
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;
 export type AuthTokenResponse = z.infer<typeof AuthTokenResponseSchema>;
+export type AuthenticatedUser = z.infer<typeof AuthenticatedUserSchema>;
 export type AuthSession = z.infer<typeof AuthSessionSchema>;
 export type AuthSessionListResponse = z.infer<typeof AuthSessionListResponseSchema>;

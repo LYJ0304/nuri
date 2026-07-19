@@ -54,8 +54,8 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
-      args: { NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:3001}" }
-    environment: { WEB_PORT: 3000, NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:3001}" }
+      args: { API_INTERNAL_URL: "http://api:3001" }
+    environment: { WEB_PORT: 3000, API_INTERNAL_URL: "http://api:3001", NEXT_PUBLIC_API_URL: "/api" }
     ports: ["${WEB_PORT:-3000}:3000"]
     depends_on: { api: { condition: service_started } }
 

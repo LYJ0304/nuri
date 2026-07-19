@@ -32,7 +32,7 @@ export function clearRefreshTokenCookie(
     httpOnly: true,
     secure,
     sameSite: 'lax',
-    path: '/auth',
+    path: '/',
   });
 }
 
@@ -46,7 +46,7 @@ export function setRefreshTokenCookie(
     httpOnly: true,
     secure,
     sameSite: 'lax',
-    path: '/auth',
+    path: '/',
     expires: expiresAt,
   };
 

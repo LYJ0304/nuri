@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 
 import { HealthCheck } from './health-check';
+import { useAuth } from './auth-provider';
 import { useCounselingStore } from '../stores/counseling-store';
 
 function Icon({ name }: { name: 'document' | 'sparkle' | 'folder' | 'arrow' | 'plus' }) {
@@ -19,6 +20,7 @@ function Icon({ name }: { name: 'document' | 'sparkle' | 'folder' | 'arrow' | 'p
 }
 
 export default function Home() {
+  const { user, logout } = useAuth();
   const load = useCounselingStore((state) => state.load);
   const clients = useCounselingStore((state) => state.clients);
   const records = useCounselingStore((state) => state.records);
@@ -47,15 +49,15 @@ export default function Home() {
           <HealthCheck />
           <div className="profile">
             <span className="avatar">이</span>
-            <span><strong>이상담</strong><small>상담사</small></span>
-            <button aria-label="프로필 메뉴">•••</button>
+            <span><strong>{user?.email ?? '상담사'}</strong><small>상담사</small></span>
+            <button aria-label="로그아웃" onClick={() => void logout()}>로그아웃</button>
           </div>
         </div>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
-          <div><span className="eyebrow">WORKSPACE</span><h1>좋은 아침이에요, 이상담님</h1></div>
+          <div><span className="eyebrow">WORKSPACE</span><h1>좋은 아침이에요, 상담사님</h1></div>
           <Link className="primary-button" href="/records/new"><Icon name="plus" />새 상담 기록</Link>
         </header>
 
