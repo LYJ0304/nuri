@@ -54,11 +54,8 @@
 | Method | Path | 인증 | 설명 |
 | --- | --- | --- | --- |
 | `POST` | `/auth/sign-up` | 없음 | 이메일과 비밀번호로 상담사 계정 생성 |
-| `POST` | `/auth/sign-in` | 없음 | access token과 HttpOnly refresh cookie 발급 |
-| `POST` | `/auth/refresh` | refresh cookie | refresh rotation 후 새 access token과 cookie 발급 |
+| `POST` | `/auth/sign-in` | 없음 | access token 발급 |
 | `GET` | `/auth/me` | Bearer | token의 현재 사용자 정보 반환 |
-
-로그인과 refresh 응답 본문에는 access token과 사용자 정보만 포함한다. refresh token은 `nuri_refresh_token` HttpOnly cookie로만 전달하며 최초 로그인 시 정해진 최대 30일 만료를 rotation 후에도 연장하지 않는다. 유효하게 서명된 이전 token이 재사용되거나 같은 token으로 동시 rotation이 발생하면 해당 세션을 폐기한다.
 
 보호된 API는 다음 header를 요구한다.
 
