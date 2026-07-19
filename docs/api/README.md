@@ -47,7 +47,7 @@
 
 ## 인증 세션 저장소
 
-`AuthSession`은 사용자별 refresh 세션의 hash, 만료·마지막 사용·폐기 시각과 선택적인 user agent/IP metadata를 저장한다. refresh token 원문은 저장하지 않고 SHA-256 hash만 저장한다. 세션 목록 응답은 token hash를 제외하고 user agent, IP, 생성·최근 사용·만료 시각과 현재 세션 여부만 반환한다.
+`AuthSession`은 사용자별 refresh 세션의 hash, 만료·마지막 사용·폐기 시각과 선택적인 user agent/IP metadata를 저장한다. refresh token 원문은 저장하지 않고 SHA-256 hash만 저장한다. 실제 refresh 발급·rotation·폐기 endpoint는 다음 구현 단계에서 이 모델을 사용한다.
 
 ## 인증 API
 
@@ -56,13 +56,9 @@
 | `POST` | `/auth/sign-up` | 없음 | 이메일과 비밀번호로 상담사 계정 생성 |
 | `POST` | `/auth/sign-in` | 없음 | access token과 HttpOnly refresh cookie 발급 |
 | `POST` | `/auth/refresh` | refresh cookie | refresh rotation 후 새 access token과 cookie 발급 |
-| `POST` | `/auth/sign-out` | refresh cookie | 현재 세션 폐기와 cookie 제거 |
-| `POST` | `/auth/sign-out-all` | Bearer | 사용자의 모든 세션 폐기와 cookie 제거 |
-| `GET` | `/auth/sessions` | Bearer | 활성 세션 목록 조회 |
-| `DELETE` | `/auth/sessions/:sessionId` | Bearer | 자신의 특정 세션 폐기 |
 | `GET` | `/auth/me` | Bearer | token의 현재 사용자 정보 반환 |
 
-로그인과 refresh 응답 본문에는 access token과 사용자 정보만 포함한다. refresh token은 `nuri_refresh_token` HttpOnly cookie로만 전달하며 최초 로그인 시 정해진 최대 30일 만료를 rotation 후에도 연장하지 않는다. 유효하게 서명된 이전 token이 재사용되거나 같은 token으로 동시 rotation이 발생하면 해당 세션을 폐기한다. access token에는 세션 ID를 포함하며, 보호된 요청마다 세션과 현재 사용자 상태를 확인하므로 로그아웃된 세션의 access token도 즉시 거부한다.
+로그인과 refresh 응답 본문에는 access token과 사용자 정보만 포함한다. refresh token은 `nuri_refresh_token` HttpOnly cookie로만 전달하며 최초 로그인 시 정해진 최대 30일 만료를 rotation 후에도 연장하지 않는다. 유효하게 서명된 이전 token이 재사용되거나 같은 token으로 동시 rotation이 발생하면 해당 세션을 폐기한다.
 
 보호된 API는 다음 header를 요구한다.
 

@@ -1,11 +1,9 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
-  Param,
   Post,
   Req,
   Res,
@@ -21,7 +19,6 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../types/authenticated-user.type';
 import { AuthService } from './auth.service';
 import {
-  clearRefreshTokenCookie,
   readRefreshTokenCookie,
   setRefreshTokenCookie,
 } from './refresh-token-cookie';
@@ -83,51 +80,9 @@ export class AuthController {
     return result.response;
   }
 
-  @Public()
-  @Post('sign-out')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async signOut(
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<void> {
-    clearRefreshTokenCookie(response, this.secureCookies);
-    await this.authService.signOut(readRefreshTokenCookie(request));
-  }
-
-  @Post('sign-out-all')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async signOutAll(
-    @CurrentUser() user: AuthenticatedUser,
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<void> {
-    clearRefreshTokenCookie(response, this.secureCookies);
-    await this.authService.signOutAll(user.userId);
-  }
-
-  @Get('sessions')
-  @UseGuards(JwtAuthGuard)
-  listSessions(@CurrentUser() user: AuthenticatedUser) {
-    return this.authService.listSessions(user.userId, user.sessionId);
-  }
-
-  @Delete('sessions/:sessionId')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async revokeSession(
-    @Param('sessionId') sessionId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<void> {
-    await this.authService.revokeSession(user.userId, sessionId);
-    if (sessionId === user.sessionId) {
-      clearRefreshTokenCookie(response, this.secureCookies);
-    }
-  }
-
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser) {
-    return { userId: user.userId, email: user.email };
+    return user;
   }
 }

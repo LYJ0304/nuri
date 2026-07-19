@@ -1,8 +1,8 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
-import type { AuthSessionListResponse, AuthTokenResponse } from '@nuri/contracts';
+import type { AuthTokenResponse } from '@nuri/contracts';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SignInDto } from '../dto/sign-in.dto';
@@ -70,7 +70,7 @@ export class AuthService {
     const refreshToken = await this.signInitialRefreshToken(user.id, sessionId);
     const refreshExpiresAt = this.readTokenExpiration(refreshToken);
 
-    const result = await this.createAuthResult(user, sessionId, refreshToken, refreshExpiresAt);
+    const result = await this.createAuthResult(user, refreshToken, refreshExpiresAt);
 
     await this.prisma.authSession.create({
       data: {
@@ -107,12 +107,12 @@ export class AuthService {
 
     const presentedHash = hashRefreshToken(refreshToken);
     if (!this.hashesMatch(presentedHash, session.refreshTokenHash)) {
-      await this.markSessionRevoked(session.id, now);
+      await this.revokeSession(session.id, now);
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     if (session.user.status !== 'ACTIVE') {
-      await this.markSessionRevoked(session.id, now);
+      await this.revokeSession(session.id, now);
       throw new UnauthorizedException('Account is not active');
     }
 
@@ -123,7 +123,6 @@ export class AuthService {
     );
     const result = await this.createAuthResult(
       session.user,
-      session.id,
       rotatedRefreshToken,
       session.expiresAt,
     );
@@ -142,85 +141,21 @@ export class AuthService {
     });
 
     if (rotation.count !== 1) {
-      await this.markSessionRevoked(session.id, now);
+      await this.revokeSession(session.id, now);
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     return result;
   }
 
-  async signOut(refreshToken: string | undefined): Promise<void> {
-    if (!refreshToken) return;
-
-    try {
-      const payload = await this.verifyRefreshToken(refreshToken);
-      await this.prisma.authSession.updateMany({
-        where: { id: payload.sid, userId: payload.sub, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-    } catch {
-      return;
-    }
-  }
-
-  async signOutAll(userId: string): Promise<void> {
-    await this.prisma.authSession.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-  }
-
-  async listSessions(
-    userId: string,
-    currentSessionId: string | undefined,
-  ): Promise<AuthSessionListResponse> {
-    const sessions = await this.prisma.authSession.findMany({
-      where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        userAgent: true,
-        ipAddress: true,
-        createdAt: true,
-        lastUsedAt: true,
-        expiresAt: true,
-      },
-    });
-
-    return sessions.map((session) => ({
-      id: session.id,
-      userAgent: session.userAgent,
-      ipAddress: session.ipAddress,
-      createdAt: session.createdAt.toISOString(),
-      lastUsedAt: session.lastUsedAt?.toISOString() ?? null,
-      expiresAt: session.expiresAt.toISOString(),
-      isCurrent: session.id === currentSessionId,
-    }));
-  }
-
-  async revokeSession(userId: string, sessionId: string): Promise<void> {
-    const session = await this.prisma.authSession.findFirst({
-      where: { id: sessionId, userId },
-      select: { id: true },
-    });
-    if (!session) throw new NotFoundException('Session not found');
-
-    await this.prisma.authSession.updateMany({
-      where: { id: sessionId, userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-  }
-
   private async createAuthResult(
     user: { id: string; email: string },
-    sessionId: string,
     refreshToken: string,
     refreshExpiresAt: Date,
   ): Promise<AuthResult> {
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
-      sid: sessionId,
     });
 
     return {
@@ -299,7 +234,7 @@ export class AuthService {
     return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
   }
 
-  private async markSessionRevoked(sessionId: string, revokedAt: Date): Promise<void> {
+  private async revokeSession(sessionId: string, revokedAt: Date): Promise<void> {
     await this.prisma.authSession.updateMany({
       where: { id: sessionId, revokedAt: null },
       data: { revokedAt },
