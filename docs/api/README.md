@@ -37,17 +37,11 @@
 | `REDIS_URL` | 예 | 향후 queue/cache 연결 URL |
 | `AI_WORKER_URL` | 예 | 내부 AI worker URL |
 | `JWT_ACCESS_SECRET` | 예 | 최소 32자의 JWT 서명 secret |
-| `JWT_ACCESS_EXPIRES_IN` | 아니요 | access token 만료시간, 기본값 `15m` |
-| `JWT_REFRESH_SECRET` | 예 | 최소 32자의 refresh token 서명 secret |
-| `JWT_REFRESH_EXPIRES_IN` | 아니요 | refresh token 만료시간, 기본값 `30d` |
+| `JWT_ACCESS_EXPIRES_IN` | 아니요 | 기본값 `15m` |
 | `API_PORT` | 아니요 | 기본값 `3001` |
 | `WEB_ORIGIN` | 아니요 | CORS origin, 기본값 `http://localhost:3000` |
 
-`.env.example`의 JWT secret은 로컬 구성 형식을 보여 주는 개발용 placeholder다. 운영 환경에서는 access와 refresh에 서로 다른 32자 이상의 secret을 주입하고 실제 secret을 저장소에 커밋하면 안 된다.
-
-## 인증 세션 저장소
-
-`AuthSession`은 사용자별 refresh 세션의 hash, 만료·마지막 사용·폐기 시각과 선택적인 user agent/IP metadata를 저장한다. refresh token 원문은 저장하지 않고 SHA-256 hash만 저장한다. 실제 refresh 발급·rotation·폐기 endpoint는 다음 구현 단계에서 이 모델을 사용한다.
+현재 `.env.example`에는 `JWT_ACCESS_SECRET`이 없고 Compose의 API 환경 변수에도 전달되지 않는다. 로컬 실행 전에 직접 설정해야 하며, Compose 실행을 정상화하려면 별도 설정 변경이 필요하다. 실제 secret을 저장소에 커밋하면 안 된다.
 
 ## 인증 API
 
@@ -186,7 +180,6 @@ DRAFT ── finalize ──> FINALIZED ── amendment ──> AMENDED
 
 ```text
 User
- ├─ AuthSession
  ├─ Client
  │   └─ CounselingRecord
  ├─ Case
