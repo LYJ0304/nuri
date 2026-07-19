@@ -4,7 +4,7 @@
 
 `apps/api`는 NestJS 기반의 유일한 공개 백엔드다. 인증, 권한, 내담자·사례 정보, 상담 기록, 감사 로그와 향후 AI job 생성을 소유한다.
 
-현재 권한 모델은 단순하다. 가입한 사용자는 상담사로 취급되며 별도의 관리자 화면, 역할, 조직 모델을 사용하지 않는다. `Case`와 `Client`의 `counselorId`가 소유자를 나타내고, 상담사는 자신이 만든 사례·내담자와 그 하위 상담 기록만 조회·변경할 수 있다.
+현재 권한 모델은 단순하다. 가입한 사용자는 상담사로 취급되며 별도의 관리자 화면, 역할, 조직 모델을 사용하지 않는다. 각 `Case`의 `counselorId`가 소유자를 나타내고, 상담사는 자신이 만든 사례와 그 하위 상담만 조회·변경할 수 있다.
 
 ## 기술 구성
 
@@ -83,18 +83,6 @@ Authorization: Bearer <access-token>
 ```
 
 내담자 개인정보는 현재 `Case`의 PostgreSQL 컬럼에 평문으로 저장한다. 응답·로그·오류 메시지에 개인정보를 불필요하게 복사하지 않는다.
-
-## 내담자·상담 기록 API
-
-모든 endpoint는 Bearer 인증을 요구한다. `Client.counselorId`를 현재 사용자 ID로 저장하며, 목록과 상세 조회는 해당 소유자 범위로 제한한다. `CounselingRecord`는 부모 Client의 소유권을 상속한다. 다른 상담사의 Client ID로 접근하면 자원 존재 여부를 노출하지 않도록 `404 Not Found`를 반환한다.
-
-| Method | Path | 설명 |
-| --- | --- | --- |
-| `POST` | `/clients` | 내 내담자 생성 |
-| `GET` | `/clients` | 내 내담자 목록 조회 |
-| `GET` | `/clients/:clientId` | 내 내담자 상세 조회 |
-| `POST` | `/clients/:clientId/records` | 내 내담자의 상담 기록 생성 |
-| `GET` | `/clients/:clientId/records` | 내 내담자의 상담 기록 목록 조회 |
 
 ## 상담 API
 
@@ -180,8 +168,6 @@ DRAFT ── finalize ──> FINALIZED ── amendment ──> AMENDED
 
 ```text
 User
- ├─ Client
- │   └─ CounselingRecord
  ├─ Case
  │   └─ Consultation
  │       └─ ConsultationRevision
