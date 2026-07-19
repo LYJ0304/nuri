@@ -16,6 +16,7 @@ model User {
   updatedAt    DateTime   @updatedAt
 
   cases                 Case[]                 @relation("CaseCounselor")
+  clients               Client[]               @relation("ClientCounselor")
   consultations         Consultation[]         @relation("ConsultationCounselor")
   consultationRevisions ConsultationRevision[]
   auditLogs             AuditLog[]
@@ -97,7 +98,9 @@ model AuditLog {
 }
 
 model Client {
-  id                 String   @id @default(cuid())
+  id                 String             @id @default(cuid())
+  counselorId        String
+  counselor          User               @relation("ClientCounselor", fields: [counselorId], references: [id])
   name               String
   birthDate          DateTime?
   gender             String?
@@ -119,27 +122,29 @@ model Client {
   familyCohabitation String?
   familyNotes        String?
   records            CounselingRecord[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([counselorId, createdAt])
 }
 
 model CounselingRecord {
-  id                    String        @id @default(cuid())
-  clientId              String
-  client                Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  title                 String
-  sessionDate           DateTime
-  sessionType           String
-  sessionNumber         Int?
-  presentingConcern     String
-  sessionContent        String
+  id                   String        @id @default(cuid())
+  clientId             String
+  client               Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title                String
+  sessionDate          DateTime
+  sessionType          String
+  sessionNumber        Int?
+  presentingConcern    String
+  sessionContent       String
   counselorObservation String?
-  intervention          String?
-  riskLevel             RiskLevel     @default(NONE)
-  followUpPlan          String?
-  summaryStatus         SummaryStatus @default(NOT_REQUESTED)
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  intervention         String?
+  riskLevel            RiskLevel     @default(NONE)
+  followUpPlan         String?
+  summaryStatus        SummaryStatus @default(NOT_REQUESTED)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   @@index([clientId, sessionDate])
 }
@@ -160,4 +165,23 @@ enum SummaryStatus {
   NOT_REQUESTED
   PENDING
   COMPLETED
+}
+
+enum CaseStatus {
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+enum ConsultationChannel {
+  IN_PERSON
+  PHONE
+  VIDEO
+  OTHER
+}
+
+enum ConsultationStatus {
+  DRAFT
+  FINALIZED
+  AMENDED
 }
