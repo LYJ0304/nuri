@@ -13,6 +13,9 @@ class EnvironmentVariables {
   @IsUrl({ require_tld: false })
   AI_WORKER_URL!: string;
 
+  @IsUrl({ require_tld: false })
+  WEB_ORIGIN = 'http://localhost:3000';
+
   @IsInt() @Min(1) @Max(65535) API_PORT = 3001;
   @IsString() @MinLength(32) JWT_ACCESS_SECRET!: string;
   @IsString() @Matches(/^\d+[smhd]$/) JWT_ACCESS_EXPIRES_IN = '15m';
