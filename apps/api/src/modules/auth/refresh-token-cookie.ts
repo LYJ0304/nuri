@@ -24,6 +24,18 @@ export function readRefreshTokenCookie(request: Request): string | undefined {
   return undefined;
 }
 
+export function clearRefreshTokenCookie(
+  response: Response,
+  secure: boolean,
+): void {
+  response.clearCookie(REFRESH_TOKEN_COOKIE_NAME, {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: '/auth',
+  });
+}
+
 export function setRefreshTokenCookie(
   response: Response,
   refreshToken: string,
