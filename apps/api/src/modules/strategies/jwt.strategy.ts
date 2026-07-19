@@ -7,7 +7,6 @@ import type { AuthenticatedUser } from '../types/authenticated-user.type';
 
 type JwtPayload = {
   sub: string;
-  email: string;
   sid: string;
 };
 
@@ -24,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-    if (!payload.sub || !payload.email || !payload.sid) {
+    if (!payload.sub || !payload.sid) {
       throw new UnauthorizedException();
     }
 
@@ -36,13 +35,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         expiresAt: { gt: new Date() },
         user: { status: 'ACTIVE' },
       },
-      select: { id: true },
+      select: { id: true, user: { select: { email: true } } },
     });
     if (!session) throw new UnauthorizedException();
 
     return {
       userId: payload.sub,
-      email: payload.email,
+      email: session.user.email,
       sessionId: payload.sid,
     };
   }

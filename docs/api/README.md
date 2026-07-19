@@ -37,7 +37,7 @@
 - 로그인 시 짧은 access token과 긴 refresh token을 발급한다. refresh token 원문은 응답 본문이나 DB에 저장하지 않는다.
 - refresh 요청마다 token을 rotation하고 이전 token의 재사용 또는 동시 사용이 감지되면 해당 세션을 폐기한다.
 - 현재 세션 로그아웃, 전체 기기 로그아웃, 활성 세션 목록 조회, 개별 세션 폐기를 지원한다.
-- access token은 `AuthSession`과 연결된다. 세션이 폐기되거나 사용자가 비활성화되면 아직 만료되지 않은 access token도 거부한다.
+- access token은 `AuthSession`과 연결된다. JWT 검증 시 사용자를 DB에서 다시 조회해 존재 여부와 `ACTIVE` 상태를 확인하고 현재 DB email을 사용한다. 세션이 폐기되거나 만료되거나 사용자가 비활성화되면 아직 만료되지 않은 access token도 거부한다. 조직 membership은 현재 개인 단위 권한 모델이므로 검증하지 않는다.
 - refresh cookie 관련 요청은 허용된 Web origin을 검증하고 credential CORS를 사용한다.
 
 ## 환경 변수
