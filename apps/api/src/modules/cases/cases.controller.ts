@@ -1,8 +1,10 @@
-import { BadRequestException, Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { CreateClientRequestSchema, CreateCounselingRecordRequestSchema } from '@nuri/contracts';
 import { CasesService } from './cases.service';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 @Controller()
+@UseGuards(JwtAuthGuard)
 export class CasesController {
   constructor(private readonly casesService: CasesService) {}
 
